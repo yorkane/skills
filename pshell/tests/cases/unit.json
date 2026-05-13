@@ -1,0 +1,126 @@
+{
+  "suite": "pshell-unit",
+  "description": "Unit tests for encoding, decoding, and escape analysis",
+  "cases": [
+    {
+      "id": "T01",
+      "name": "Simple base64 encode-decode round-trip",
+      "strategy": "B",
+      "input_script": "Write-Output 'hello world'",
+      "expected": "round-trip match",
+      "validation": "decode(encode(input)) === input"
+    },
+    {
+      "id": "T02",
+      "name": "Special characters in script",
+      "strategy": "B",
+      "input_script": "Write-Output 'path: C:\\Program Files\\test'",
+      "expected": "round-trip match",
+      "validation": "No corruption of backslashes or spaces"
+    },
+    {
+      "id": "T03",
+      "name": "Double and single quotes in script",
+      "strategy": "B",
+      "input_script": "Write-Output \"double-quoted\"; Write-Output 'single-quoted'",
+      "expected": "round-trip match",
+      "validation": "Both quote types preserved"
+    },
+    {
+      "id": "T04",
+      "name": "Variables in script",
+      "strategy": "B",
+      "input_script": "$env:USERNAME; $PSVersionTable.PSVersion",
+      "expected": "round-trip match",
+      "validation": "$ prefix preserved (not expanded during encoding)"
+    },
+    {
+      "id": "T05",
+      "name": "Multi-line script",
+      "strategy": "B",
+      "input_script": "Get-Date\nGet-Process -Id $PID\nWrite-Output 'done'",
+      "expected": "round-trip match",
+      "validation": "Line breaks preserved"
+    },
+    {
+      "id": "T06",
+      "name": "Escape analyzer: PS→Bash simple",
+      "strategy": "A",
+      "source": "ps",
+      "target": "bash",
+      "layers": 2,
+      "command": "ls -la",
+      "expected_strategy": "Simple Wrap"
+    },
+    {
+      "id": "T07",
+      "name": "Escape analyzer: PS→PS complex (4 layers)",
+      "strategy": "B",
+      "source": "ps",
+      "target": "ps",
+      "layers": 4,
+      "command": "Write-Output \"hello\"",
+      "expected_strategy": "EncodedCommand"
+    },
+    {
+      "id": "T08",
+      "name": "Special char detection: alphanumeric only",
+      "command": "whoami",
+      "has_special": false
+    },
+    {
+      "id": "T09",
+      "name": "Special char detection: with quotes",
+      "command": "Write-Output \"hello\"",
+      "has_special": true
+    },
+    {
+      "id": "T10",
+      "name": "Special char detection: path with backslash",
+      "command": "New-Item -Path C:\\temp -ItemType Directory",
+      "has_special": false
+    },
+    {
+      "id": "T11",
+      "name": "Chain: bash→SSH→ps (simple)",
+      "chain": "bash,ssh,ps",
+      "command": "Get-Date",
+      "expected_strategy": "EncodedCommand"
+    },
+    {
+      "id": "T12",
+      "name": "Chain: ps→SSH→bash (simple)",
+      "chain": "ps,ssh,bash",
+      "command": "ls -la",
+      "expected_strategy": "Single-Quote Wrap"
+    },
+    {
+      "id": "T13",
+      "name": "Chain: ps→SSH→bash→SSH→ps (multi-hop mixed)",
+      "chain": "ps,ssh,bash,ssh,ps",
+      "command": "whoami",
+      "expected_strategy": "EncodedCommand"
+    },
+    {
+      "id": "T14",
+      "name": "Chain: bash→SSH→ps→SSH→bash (ping-pong)",
+      "chain": "bash,ssh,ps,ssh,bash",
+      "command": "echo hello",
+      "expected_strategy": "Single-Quote Wrap"
+    },
+    {
+      "id": "T15",
+      "name": "Chain: ps→SSH→bash→qm_exec→ps (PVE path)",
+      "chain": "ps,ssh,bash,qm_exec,ps",
+      "command": "Write-Output 'test'",
+      "expected_strategy": "EncodedCommand"
+    },
+    {
+      "id": "T16",
+      "name": "Chain: bash→SSH→bash→SSH→bash (multi-bash)",
+      "chain": "bash,ssh,bash,ssh,bash",
+      "command": "ls -la /tmp",
+      "expected_strategy": "Single-Quote Wrap"
+    }
+  ]
+}

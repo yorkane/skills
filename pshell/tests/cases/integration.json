@@ -1,0 +1,118 @@
+{
+  "suite": "pshell-integration",
+  "description": "Integration tests against real environments (PVE + Windows VM)",
+  "env": {
+    "pve_host": "192.168.1.21",
+    "vm_id": "122",
+    "win_host": "192.168.1.176",
+    "win_user": "aigc"
+  },
+  "cases": [
+    {
+      "id": "I01",
+      "name": "PS→SSH→Bash: simple echo",
+      "strategy": "A",
+      "command": "ssh -o StrictHostKeyChecking=no root@192.168.1.21 \"echo 'hello_from_bash'\"",
+      "expected_output": "hello_from_bash",
+      "description": "Tests basic PS→SSH→Bash connectivity with Strategy A"
+    },
+    {
+      "id": "I02",
+      "name": "PVE Guest Agent ping",
+      "strategy": "N/A",
+      "command": "ssh root@192.168.1.21 \"qm agent 122 ping\"",
+      "expected_exitcode": 0,
+      "description": "Verifies QEMU Guest Agent is responsive in VM"
+    },
+    {
+      "id": "I03",
+      "name": "PS→SSH→PVE→qm→PS: EncodedCommand simple",
+      "strategy": "B",
+      "script": "Write-Output 'test_from_encoded_cmd'",
+      "expected_output": "test_from_encoded_cmd",
+      "description": "Tests Strategy B (EncodedCommand) through full 4-layer chain"
+    },
+    {
+      "id": "I04",
+      "name": "PS→SSH→PVE→qm→PS: Directory create",
+      "strategy": "B",
+      "script": "New-Item -Path 'C:\\pshell_test' -ItemType Directory -Force; Write-Output 'created'",
+      "expected_output": "created",
+      "description": "Tests directory creation in Windows VM via EncodedCommand"
+    },
+    {
+      "id": "I05",
+      "name": "PS→SSH→PVE→qm→PS: Special chars in file content",
+      "strategy": "B",
+      "script": "Set-Content -Path 'C:\\test.txt' -Value 'Hello \"World\" & special' -Encoding UTF8",
+      "expected_exitcode": 0,
+      "description": "Tests writing files with special characters via EncodedCommand"
+    },
+    {
+      "id": "I06",
+      "name": "PS→SSH→PVE→qm→cmd: mkdir",
+      "strategy": "C",
+      "command": "ssh root@192.168.1.21 \"qm guest exec 122 -- cmd.exe /c 'mkdir C:\\test_dir'\"",
+      "expected_exitcode": 0,
+      "description": "Tests Strategy C (cmd pass-through) for simple operations"
+    },
+    {
+      "id": "I07",
+      "name": "SSH key auth test",
+      "strategy": "N/A",
+      "command": "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa aigc@192.168.1.176 whoami",
+      "expected_output_contains": "aigc",
+      "description": "Verifies SSH key authentication works (requires pre-configured key)"
+    },
+    {
+      "id": "I08",
+      "name": "Node.js vs PS native encoding match",
+      "strategy": "B",
+      "description": "Verifies encode-ps.js produces same base64 as PowerShell's native [Convert]::ToBase64String",
+      "type": "comparison"
+    },
+    {
+      "id": "I09",
+      "name": "Multi-line script execution",
+      "strategy": "B",
+      "script": "$date = Get-Date -Format 'yyyy-MM-dd'\nWrite-Output \"Date: $date\"",
+      "expected_output_contains": "Date:",
+      "description": "Tests multi-line script execution through full chain"
+    },
+    {
+      "id": "I10",
+      "name": "Error handling: non-existent command",
+      "strategy": "B",
+      "script": "NonExistentCmdLet -Param value",
+      "expected_exitcode_nonzero": true,
+      "description": "Tests that errors propagate correctly through the chain"
+    },
+    {
+      "id": "I11",
+      "name": "Chain: PS→SSH→PS (direct SSH to Windows)",
+      "strategy": "B",
+      "chain": "ps,ssh,ps",
+      "script": "Write-Output 'direct_ssh_ps_test'",
+      "expected_output": "direct_ssh_ps_test",
+      "description": "Tests direct PS→SSH→PS without Bash intermediate (uses key auth to Win VM)"
+    },
+    {
+      "id": "I12",
+      "name": "Chain: Bash→SSH→Bash→qm_exec→PS (PVE operator path)",
+      "strategy": "B",
+      "chain": "bash,ssh,bash,qm_exec,ps",
+      "script": "Write-Output 'pve_operator_path_test'",
+      "expected_output": "pve_operator_path_test",
+      "description": "Tests the PVE operator scenario: Bash local → PVE → Guest Agent → Win PS"
+    },
+    {
+      "id": "I13",
+      "name": "Chain: PS→SSH→Bash→qm_exec→cmd (cmd passthrough)",
+      "strategy": "C",
+      "chain": "ps,ssh,bash,qm_exec,cmd",
+      "command": "ssh root@192.168.1.21 \"qm guest exec 122 -- cmd.exe /c 'echo cmd_passthrough_ok'\"",
+      "expected_output_contains": "cmd_passthrough_ok",
+      "description": "Tests cmd.exe passthrough through full PVE chain"
+    }
+  ]
+}

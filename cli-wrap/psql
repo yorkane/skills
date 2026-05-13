@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#==================================================
+# PostgreSQL psql 封装 - 隐藏连接参数，直接使用
+# 用法: mypg [psql 的其他参数和命令]
+# 示例: mypg -c "SELECT 1"
+#       mypg mydatabase   # 连接到指定数据库（覆盖默认库）
+#==================================================
+
+# ----- 从 .env 加载配置 -----
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+if [ -f "$SCRIPT_DIR/../.env" ]; then
+    source "$SCRIPT_DIR/../.env"
+fi
+
+HOST="192.168.1.31"
+PORT="5432"
+DBNAME="${DB_NAME:-postgres}"
+USER="postgres"
+PASS="Wasu@3.14"
+# ----------------------------------------
+
+# 通过环境变量传递密码（不会出现在 ps 命令行中）
+if [ -n "$PASS" ]; then
+    export PGPASSWORD="$PASS"
+fi
+
+# 可选：设置其他连接参数的环境变量（也可在 exec 参数中指定，这里用环境变量更干净）
+export PGHOST="$HOST"
+export PGPORT="$PORT"
+export PGUSER="$USER"
+export PGDATABASE="$DBNAME"
+
+# 移除原有的全局psql命令, 将本脚本软链接在 /usr/local/sbin/psql, 确保可以全局执行并替代原有的psql
+# 调用真正的 psql，转发所有用户参数
+exec /usr/lib/postgresql/16/bin/psql -A -q -X --no-psqlrc "$@"
