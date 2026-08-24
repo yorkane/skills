@@ -1,0 +1,4 @@
+interface:
+  display_name: "Quasar UMD"
+  short_description: "构建和维护 Vue 3 Quasar UMD 前端"
+  default_prompt: "使用 $quasar-umd 搭建或修改一个 Vue 3 + Quasar UMD 前端页面。"
