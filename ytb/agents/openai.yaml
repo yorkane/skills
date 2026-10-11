@@ -1,0 +1,3 @@
+interface:
+  display_name: "ytb"
+  short_description: "MeTube/yt-dlp 视频下载与频道监控，为视频分析备料"
